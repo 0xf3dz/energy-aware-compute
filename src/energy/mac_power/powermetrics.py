@@ -28,7 +28,7 @@ from typing import Any
 
 from contracts import ComputeEnergyMonitor, EnergyEstimate
 from energy.mac_power.plist import extract_documents
-from energy.mac_power.samples import ProcessSample, PowerSample, parse_power_sample
+from energy.mac_power.samples import PowerSample, ProcessSample, parse_power_sample
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +171,7 @@ class PowermetricsProvider(ComputeEnergyMonitor):
                         record["observed"] = observed
         except asyncio.CancelledError:
             raise
-        except Exception as exc:  # sampling must never break job accounting
+        except Exception as exc:
             record["reason"] = record["reason"] or f"Sample stream failed: {type(exc).__name__}"
 
     async def _read_stderr(self, record: dict[str, Any], handle: Any) -> None:
@@ -238,7 +238,7 @@ class PowermetricsProvider(ComputeEnergyMonitor):
         try:
             await asyncio.wait_for(handle.wait(), self.cleanup_timeout_seconds)
             return True
-        except (TimeoutError, asyncio.TimeoutError):
+        except TimeoutError:
             return False
         except ProcessLookupError:
             return True

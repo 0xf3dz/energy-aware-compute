@@ -5,8 +5,11 @@ with a NUL byte. Output arrives in arbitrary chunks, so callers keep the
 unparsed remainder and append the next chunk to it.
 """
 
+import logging
 import plistlib
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 DOCUMENT_END = b"</plist>"
 
@@ -23,7 +26,8 @@ def extract_documents(buffer: bytes) -> tuple[list[dict[str, Any]], bytes]:
         buffer = buffer[slice_end:]
         try:
             document = plistlib.loads(chunk)
-        except Exception:  # a malformed sample must not stop collection
+        except Exception:
+            logger.warning("Skipping an unparsable powermetrics document")
             continue
         if isinstance(document, dict):
             documents.append(document)

@@ -3,7 +3,7 @@
 import asyncio
 import hashlib
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from email.utils import parsedate_to_datetime
 from typing import Any
 from urllib.parse import quote
@@ -60,7 +60,7 @@ class VRMProvider:
                     if isinstance(batch, dict):
                         batch = [batch] if "dbusPath" in batch else list(batch.values())
                     if not isinstance(batch, list):
-                        raise ValueError("VRM diagnostics records are invalid")
+                        raise TypeError("VRM diagnostics records are invalid")
                     records.extend(batch)
                     total = raw.get("num_records")
                     if not batch or (isinstance(total, int) and len(records) >= total):
@@ -108,7 +108,7 @@ class VRMProvider:
         except (ValueError, OverflowError):
             try:
                 stamp = parsedate_to_datetime(value)
-                return stamp.replace(tzinfo=timezone.utc) if stamp.tzinfo is None else stamp
+                return stamp.replace(tzinfo=UTC) if stamp.tzinfo is None else stamp
             except (TypeError, ValueError, OverflowError):
                 return now + timedelta(seconds=max(self.poll_interval_seconds, 60))
 

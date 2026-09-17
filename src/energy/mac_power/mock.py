@@ -4,7 +4,6 @@ import time
 from collections.abc import Callable
 
 from contracts import ComputeEnergyMonitor, EnergyEstimate
-
 from energy.models import METHOD_MOCK
 
 

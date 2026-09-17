@@ -7,7 +7,7 @@ into watt-hours.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 # Alternative spellings across powermetrics releases, all in milliwatts.
@@ -106,7 +106,7 @@ def _timestamp(document: dict[str, Any]) -> datetime:
     if isinstance(raw, str):
         for fmt in ("%Y-%m-%d %H:%M:%S %z", "%Y-%m-%d %H:%M:%S.%f %z"):
             try:
-                return datetime.strptime(raw, fmt).astimezone(timezone.utc)
+                return datetime.strptime(raw, fmt).astimezone(UTC)
             except ValueError:
                 continue
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)

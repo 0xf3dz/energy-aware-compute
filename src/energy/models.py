@@ -31,13 +31,13 @@ class UnavailableEnergyProvider:
         )
 
 __all__ = [
+    "CONFIDENCE_ESTIMATED",
+    "METHOD_MOCK",
+    "METHOD_POWERMETRICS",
     "Availability",
     "ComputeEnergyMonitor",
-    "CONFIDENCE_ESTIMATED",
     "EnergyEstimate",
     "EnergyProvider",
     "EnergyState",
-    "METHOD_MOCK",
-    "METHOD_POWERMETRICS",
     "UnavailableEnergyProvider",
 ]

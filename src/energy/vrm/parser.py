@@ -5,7 +5,7 @@ https://github.com/victronenergy/venus/wiki/dbus#system
 """
 
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from contracts import Availability, EnergyState
@@ -34,7 +34,7 @@ def parse_diagnostics(raw: dict[str, Any], now: datetime, freshness_seconds: flo
             continue
         try:
             value = float(value)
-            stamp = datetime.fromtimestamp(float(stamp), timezone.utc)
+            stamp = datetime.fromtimestamp(float(stamp), UTC)
         except (ValueError, TypeError, OverflowError, OSError):
             continue
         if not math.isfinite(value) or stamp > now:
