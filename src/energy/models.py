@@ -9,6 +9,7 @@ from contracts import (
     EnergyEstimate,
     EnergyProvider,
     EnergyState,
+    utcnow,
 )
 
 # Measurement methods a provider may report. "metered" is reserved for a real
@@ -16,6 +17,18 @@ from contracts import (
 METHOD_POWERMETRICS = "powermetrics"
 METHOD_MOCK = "mock"
 CONFIDENCE_ESTIMATED = "estimated"
+
+
+class UnavailableEnergyProvider:
+    """Report a missing energy source instead of inventing a state."""
+
+    def __init__(self, reason: str = "No vessel energy source is configured") -> None:
+        self.reason = reason
+
+    async def current(self) -> EnergyState:
+        return EnergyState(
+            timestamp=utcnow(), availability=Availability.UNAVAILABLE, reason=self.reason
+        )
 
 __all__ = [
     "Availability",
@@ -26,4 +39,5 @@ __all__ = [
     "EnergyState",
     "METHOD_MOCK",
     "METHOD_POWERMETRICS",
+    "UnavailableEnergyProvider",
 ]

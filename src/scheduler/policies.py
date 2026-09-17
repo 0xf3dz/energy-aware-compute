@@ -35,6 +35,7 @@ class Policy:
         max_age_seconds: float = 300,
         max_sample_gap_seconds: float = 120,
         max_stale_seconds: float = 3600,
+        max_clock_skew_seconds: float = 5,
         forecast_budget: bool = True,
     ) -> None:
         if not 0 <= safety_floor_soc <= high_soc <= 100:
@@ -44,6 +45,7 @@ class Policy:
             max_age_seconds,
             max_sample_gap_seconds,
             max_stale_seconds,
+            max_clock_skew_seconds,
         )
         if any(not math.isfinite(value) or value < 0 for value in durations):
             raise ValueError("Policy durations must be finite and nonnegative")
@@ -56,6 +58,7 @@ class Policy:
         self.max_age_seconds = max_age_seconds
         self.max_sample_gap_seconds = max_sample_gap_seconds
         self.max_stale_seconds = max_stale_seconds
+        self.max_clock_skew_seconds = max_clock_skew_seconds
         self.forecast_budget = forecast_budget
         self._surplus_since: datetime | None = None
         self._last_sample: datetime | None = None
@@ -71,16 +74,20 @@ class Policy:
 
         The hold uses distinct, ordered, timely source samples. A repeated
         cached sample cannot prove that a surplus continued, and a gap in
-        samples clears the history.
+        samples clears the history. A measurement stamped slightly ahead of the
+        local clock is accepted; a larger offset means an untrustworthy clock.
         """
         age = (now - energy.timestamp).total_seconds()
-        fresh = energy.availability == Availability.FRESH and 0 <= age <= self.max_age_seconds
+        fresh = (
+            energy.availability == Availability.FRESH
+            and -self.max_clock_skew_seconds <= age <= self.max_age_seconds
+        )
         if not fresh:
             self.reset()
             return False
         if self._last_sample is not None:
             gap = (energy.timestamp - self._last_sample).total_seconds()
-            if gap < 0 or gap > self.max_sample_gap_seconds:
+            if gap < -self.max_clock_skew_seconds or gap > self.max_sample_gap_seconds:
                 self.reset()
         self._last_sample = energy.timestamp
         if not self._qualifying(energy):

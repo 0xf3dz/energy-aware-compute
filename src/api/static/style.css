@@ -1,0 +1,85 @@
+:root {
+  --bg: #1c1c1c;
+  --panel: #262626;
+  --line: #3d3d3d;
+  --text: #d8d8d8;
+  --dim: #8f8f8f;
+  --ok: #6fb36f;
+  --warn: #d0a24c;
+  --bad: #c96f6f;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.45 ui-monospace, "DejaVu Sans Mono", Menlo, monospace;
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: #202020;
+}
+
+h1 { font-size: 14px; margin: 0; letter-spacing: 1px; font-weight: 600; }
+h2 { font-size: 12px; margin: 0 0 8px; color: var(--dim); letter-spacing: 1px; font-weight: 600; }
+h3 { font-size: 11px; margin: 12px 0 4px; color: var(--dim); font-weight: 600; }
+
+main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+
+section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+}
+
+section.wide { grid-column: 1 / -1; }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 2px 8px 2px 0; vertical-align: top; }
+th { color: var(--dim); font-weight: 600; border-bottom: 1px solid var(--line); }
+tbody tr:nth-child(even) { background: #2b2b2b; }
+
+td.key { color: var(--dim); width: 46%; }
+
+.note { color: var(--dim); margin: 8px 0 0; white-space: pre-wrap; }
+.status { color: var(--dim); }
+.status.ok { color: var(--ok); }
+.status.bad { color: var(--bad); }
+.fresh { color: var(--ok); }
+.stale { color: var(--warn); }
+.unavailable, .failed, .error { color: var(--bad); }
+.running { color: var(--warn); }
+.completed { color: var(--ok); }
+
+pre {
+  margin: 0;
+  white-space: pre-wrap;
+  background: #232323;
+  border: 1px solid var(--line);
+  padding: 8px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  color: var(--dim);
+}
+
+a { color: #7fa8d0; }

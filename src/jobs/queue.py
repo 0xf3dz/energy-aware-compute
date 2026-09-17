@@ -134,8 +134,9 @@ class MockQueue:
                 "recent": [_dump(job) for job in _recent(self.jobs)],
             },
             "decisions": [decision.model_dump(mode="json") for decision in self.decisions[-20:]],
+            "inference": _inference(self.jobs),
             "latest_briefing": _latest_briefing(self.jobs),
-            "today": {},
+            "today": _today(self.jobs, self.decisions),
         }
 
 
@@ -163,6 +164,34 @@ def _recent(jobs: dict[str, Job], limit: int = 10) -> list[Job]:
 
 def _dump(job: Job) -> dict[str, Any]:
     return job.model_dump(mode="json")
+
+
+def _today(jobs: dict[str, Job], decisions: list[Decision]) -> dict[str, Any]:
+    completed = [job for job in jobs.values() if job.status == JobStatus.COMPLETED]
+    tokens = 0
+    requests = 0
+    for job in completed:
+        for item in (job.result or {}).get("inference_metrics", []):
+            tokens += item.get("generated_tokens") or 0
+            requests += 1
+    return {
+        "generated_tokens": tokens,
+        "inference_requests": requests,
+        "estimated_inference_wh": round(
+            sum(job.actual_estimated_energy_wh or 0 for job in completed), 6
+        ),
+        "jobs_completed": len(completed),
+        "jobs_deferred_to_solar": len({item.job_id for item in decisions if item.decision == "DEFER"}),
+        "jobs_waiting_for_energy": len(_by_status(jobs, JobStatus.WAITING_FOR_ENERGY)),
+    }
+
+
+def _inference(jobs: dict[str, Job]) -> dict[str, Any]:
+    metrics: list[dict[str, Any]] = []
+    for job in _recent(jobs, limit=20):
+        for item in (job.result or {}).get("inference_metrics", []):
+            metrics.append(item)
+    return {"latest": metrics[0] if metrics else None, "recent": metrics[:20]}
 
 
 def _latest_briefing(jobs: dict[str, Job]) -> dict[str, Any] | None:

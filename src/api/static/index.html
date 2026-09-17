@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Energy aware compute</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>ENERGY AWARE COMPUTE</h1>
+  <div id="status" class="status">loading</div>
+</header>
+
+<main>
+  <section>
+    <h2>ENERGY</h2>
+    <table id="energy"><tbody></tbody></table>
+    <p id="energy-reason" class="note"></p>
+  </section>
+
+  <section>
+    <h2>INFERENCE</h2>
+    <table id="inference"><tbody></tbody></table>
+  </section>
+
+  <section>
+    <h2>SCHEDULER</h2>
+    <table id="scheduler"><tbody></tbody></table>
+    <h3>Latest decision</h3>
+    <p id="decision" class="note"></p>
+    <h3>Deferred for energy</h3>
+    <table id="deferred"><tbody></tbody></table>
+  </section>
+
+  <section>
+    <h2>TODAY (UTC)</h2>
+    <table id="today"><tbody></tbody></table>
+  </section>
+
+  <section class="wide">
+    <h2>RUNNING AND RECENT JOBS</h2>
+    <table id="jobs"><thead><tr>
+      <th>workload</th><th>status</th><th>priority</th><th>deferrable</th>
+      <th>completed</th><th>estimated Wh</th><th>error</th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
+  <section class="wide">
+    <h2>DAILY BRIEFING</h2>
+    <pre id="briefing">No briefing has been generated yet.</pre>
+  </section>
+
+  <section class="wide">
+    <h2>DECISION LOG</h2>
+    <table id="decisions"><thead><tr>
+      <th>time</th><th>job</th><th>decision</th><th>battery</th><th>surplus W</th><th>reason</th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+</main>
+
+<footer>
+  <span id="runtime" class="note"></span>
+  <a id="vrm" href="https://vrm.victronenergy.com/" target="_blank" rel="noreferrer">Victron VRM (electrical detail)</a>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
