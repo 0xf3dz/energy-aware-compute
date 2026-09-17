@@ -188,7 +188,7 @@ async def build_runtime(settings: Settings, *, clock: Callable[[], datetime] | N
         policy,
         poll_seconds=settings.poll_seconds,
         clock=now,
-        ownership=None if settings.demo else queue.ownership,
+        ownership=None if settings.demo else queue.ownership(),
     )
     scheduler.register_daily(
         "weather-briefing-daily",
