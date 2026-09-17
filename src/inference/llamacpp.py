@@ -22,7 +22,6 @@ from contracts import (
     GenerationRequest,
     GenerationResponse,
     InferenceMetrics,
-    utcnow,
 )
 from inference.interface import InferenceUnavailable
 
