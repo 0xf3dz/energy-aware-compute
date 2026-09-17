@@ -29,6 +29,13 @@ def parse_diagnostics(raw: dict[str, Any], now: datetime, freshness_seconds: flo
         path = record.get("dbusPath")
         if not isinstance(path, str):
             continue
+        if path not in {
+            "/Dc/Battery/Soc", "/Dc/Battery/Power", "/Dc/Pv/Power",
+            "/Ac/Consumption/NumberOfPhases",
+            "/Ac/Consumption/L1/Power", "/Ac/Consumption/L2/Power",
+            "/Ac/Consumption/L3/Power",
+        }:
+            continue
         value, stamp = record.get("rawValue"), record.get("timestamp")
         if isinstance(value, bool) or isinstance(stamp, bool):
             continue

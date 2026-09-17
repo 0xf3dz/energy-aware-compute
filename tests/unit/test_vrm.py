@@ -29,6 +29,19 @@ def test_normalization_reads_the_system_service_only() -> None:
     assert state.battery_soc != 12
 
 
+def test_unrelated_alarm_instance_does_not_hide_system_measurements() -> None:
+    raw = _records()
+    raw["records"].append({
+        "dbusServiceType": "system", "instance": 276,
+        "dbusPath": "/Ac/Alarms/GridLost", "rawValue": 0,
+        "timestamp": NOW.timestamp(),
+    })
+    state = parse_diagnostics(raw, NOW, 300)
+    assert state.availability == Availability.FRESH
+    assert state.battery_soc == 91
+    assert state.ac_load_w == 300
+
+
 def test_old_measurements_are_marked_stale() -> None:
     raw = json.loads(json.dumps(DIAGNOSTICS))
     for record in raw["records"]:
