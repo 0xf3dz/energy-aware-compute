@@ -1,5 +1,5 @@
 """Provider-independent application contracts. All times use UTC."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any, Protocol
 from uuid import uuid4
@@ -8,7 +8,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Model(BaseModel):
@@ -70,7 +70,16 @@ class GenerationRequest(Model):
 
 
 class InferenceMetrics(Model):
+    """Counters describe one request when ``source`` is ``generate``.
+
+    When ``source`` is ``server_interval`` the counters are differences between
+    two consecutive server snapshots and ``interval_seconds`` is their window.
+    Gauges (active requests, KV usage) always describe the instant of sampling.
+    """
+
     timestamp: AwareDatetime = Field(default_factory=utcnow)
+    source: str = "generate"
+    interval_seconds: float = 0
     model: str = "unknown"
     prompt_tokens: int | None = None
     generated_tokens: int | None = None
@@ -80,6 +89,7 @@ class InferenceMetrics(Model):
     kv_cache_usage: float | None = None
     runtime_seconds: float = 0
     availability: Availability = Availability.UNAVAILABLE
+    reason: str | None = None
 
 
 class GenerationResponse(Model):
@@ -168,6 +178,14 @@ class Queue(Protocol):
     async def pending(self) -> list[Job]: ...
     async def claim(self, job_id: str) -> Job | None: ...
     async def defer(self, job_id: str) -> None: ...
+    async def cancel(self, job_id: str) -> bool: ...
+    async def save_energy(self, state: EnergyState) -> None: ...
     async def finish(self, job: Job, result: JobResult | None, estimate: EnergyEstimate,
                      error: str | None = None) -> None: ...
     async def record_decision(self, decision: Decision) -> None: ...
+
+
+class ReadModel(Protocol):
+    """Dashboard read model. Returns JSON-safe data only."""
+
+    async def snapshot(self) -> dict[str, Any]: ...
