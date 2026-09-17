@@ -10,7 +10,7 @@ question: which compute does the machine run, and why?
 
 # For what purpose?
 
-This repository is a prototype for a local inference lab aboard my sailboat, with solar energy as its only power
+This repository is a prototype for an offgrid local inference lab aboard my sailboat, with solar energy as its only power
 source. The goal is to use local AI within the limits of the boat’s energy supply.
 
 A boat has a limited energy budget. Navigation equipment and other vessel systems take priority over optional
