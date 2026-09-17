@@ -101,17 +101,16 @@ class PostgresQueue:
 
     async def claim(self, job_id: str) -> Job | None:
         """Claim one job. The advisory lock keeps exactly one job running."""
-        async with self.pool.connection() as connection:
-            async with connection.transaction():
-                await connection.execute("SELECT pg_advisory_xact_lock(%s)", (CLAIM_LOCK,))
-                cursor = await connection.execute(
-                    "UPDATE jobs SET status = 'RUNNING', started_at = CURRENT_TIMESTAMP "
-                    "WHERE id = %s AND status IN ('QUEUED', 'WAITING_FOR_ENERGY') "
-                    "AND NOT EXISTS (SELECT 1 FROM jobs WHERE status = 'RUNNING') "
-                    f"RETURNING {JOB_COLUMNS}",
-                    (job_id,),
-                )
-                row = await cursor.fetchone()
+        async with self.pool.connection() as connection, connection.transaction():
+            await connection.execute("SELECT pg_advisory_xact_lock(%s)", (CLAIM_LOCK,))
+            cursor = await connection.execute(
+                "UPDATE jobs SET status = 'RUNNING', started_at = CURRENT_TIMESTAMP "
+                "WHERE id = %s AND status IN ('QUEUED', 'WAITING_FOR_ENERGY') "
+                "AND NOT EXISTS (SELECT 1 FROM jobs WHERE status = 'RUNNING') "
+                f"RETURNING {JOB_COLUMNS}",
+                (job_id,),
+            )
+            row = await cursor.fetchone()
         return _job(row) if row is not None else None
 
     async def defer(self, job_id: str) -> None:
@@ -143,49 +142,48 @@ class PostgresQueue:
     ) -> None:
         """Persist the outcome and every piece of evidence in one transaction."""
         status = JobStatus.FAILED if error else JobStatus.COMPLETED
-        async with self.pool.connection() as connection:
-            async with connection.transaction():
-                cursor = await connection.execute(
-                    "UPDATE jobs SET status = %s, completed_at = CURRENT_TIMESTAMP, "
-                    "result = %s, error = %s, actual_estimated_energy_wh = %s "
-                    "WHERE id = %s AND status = 'RUNNING' RETURNING id",
-                    (
-                        status.value,
-                        Jsonb(result.model_dump(mode="json")) if result is not None else None,
-                        error,
-                        estimate.estimated_wh,
-                        job.id,
-                    ),
-                )
-                if await cursor.fetchone() is None:
-                    logger.warning("Job %s was not RUNNING when it finished", job.id)
-                if result is not None:
-                    for metrics in result.inference_metrics:
-                        await connection.execute(
-                            "INSERT INTO inference_metrics (job_id, recorded_at, metrics) "
-                            "VALUES (%s, %s, %s)",
-                            (job.id, metrics.timestamp, Jsonb(metrics.model_dump(mode="json"))),
-                        )
-                    if result.forecast is not None:
-                        await connection.execute(
-                            "INSERT INTO weather_forecasts (job_id, recorded_at, forecast) "
-                            "VALUES (%s, %s, %s)",
-                            (
-                                job.id,
-                                result.forecast.timestamp,
-                                Jsonb(result.forecast.model_dump(mode="json")),
-                            ),
-                        )
-                    if result.briefing:
-                        await connection.execute(
-                            "INSERT INTO weather_briefings (job_id, recorded_at, text) "
-                            "VALUES (%s, CURRENT_TIMESTAMP, %s)",
-                            (job.id, result.briefing),
-                        )
-                await connection.execute(
-                    "INSERT INTO energy_samples (job_id, source, sample) VALUES (%s, 'compute', %s)",
-                    (job.id, Jsonb(estimate.model_dump(mode="json"))),
-                )
+        async with self.pool.connection() as connection, connection.transaction():
+            cursor = await connection.execute(
+                "UPDATE jobs SET status = %s, completed_at = CURRENT_TIMESTAMP, "
+                "result = %s, error = %s, actual_estimated_energy_wh = %s "
+                "WHERE id = %s AND status = 'RUNNING' RETURNING id",
+                (
+                    status.value,
+                    Jsonb(result.model_dump(mode="json")) if result is not None else None,
+                    error,
+                    estimate.estimated_wh,
+                    job.id,
+                ),
+            )
+            if await cursor.fetchone() is None:
+                logger.warning("Job %s was not RUNNING when it finished", job.id)
+            if result is not None:
+                for metrics in result.inference_metrics:
+                    await connection.execute(
+                        "INSERT INTO inference_metrics (job_id, recorded_at, metrics) "
+                        "VALUES (%s, %s, %s)",
+                        (job.id, metrics.timestamp, Jsonb(metrics.model_dump(mode="json"))),
+                    )
+                if result.forecast is not None:
+                    await connection.execute(
+                        "INSERT INTO weather_forecasts (job_id, recorded_at, forecast) "
+                        "VALUES (%s, %s, %s)",
+                        (
+                            job.id,
+                            result.forecast.timestamp,
+                            Jsonb(result.forecast.model_dump(mode="json")),
+                        ),
+                    )
+                if result.briefing:
+                    await connection.execute(
+                        "INSERT INTO weather_briefings (job_id, recorded_at, text) "
+                        "VALUES (%s, CURRENT_TIMESTAMP, %s)",
+                        (job.id, result.briefing),
+                    )
+            await connection.execute(
+                "INSERT INTO energy_samples (job_id, source, sample) VALUES (%s, 'compute', %s)",
+                (job.id, Jsonb(estimate.model_dump(mode="json"))),
+            )
 
     async def _sample(self, job_id: str | None, source: str, payload: dict[str, Any]) -> None:
         async with self.pool.connection() as connection:

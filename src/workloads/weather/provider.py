@@ -9,7 +9,7 @@ import hashlib
 import json
 import logging
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -263,7 +263,7 @@ def _parse_stamp(value: Any) -> datetime | None:
         stamp = datetime.fromisoformat(value)
     except ValueError:
         return None
-    return stamp.replace(tzinfo=timezone.utc) if stamp.tzinfo is None else stamp
+    return stamp.replace(tzinfo=UTC) if stamp.tzinfo is None else stamp
 
 
 def _cached_forecast(

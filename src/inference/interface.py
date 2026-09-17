@@ -16,7 +16,9 @@ class InferenceUnavailable(RuntimeError):
     """The provider cannot serve the request. Callers must not fabricate output."""
 
 
-async def request_text(provider: InferenceProvider, request: GenerationRequest) -> tuple[str, InferenceMetrics]:
+async def request_text(
+    provider: InferenceProvider, request: GenerationRequest
+) -> tuple[str, InferenceMetrics]:
     """Generate text and return it with the metrics of that single request."""
     response: GenerationResponse = await provider.generate(request)
     return response.text, response.metrics

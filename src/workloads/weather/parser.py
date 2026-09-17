@@ -119,9 +119,12 @@ def _peak(forecast: Forecast, field: str) -> tuple[dict[str, Any], float] | None
     best: tuple[dict[str, Any], float] | None = None
     for row in forecast.hours:
         value = row.get(field)
-        if isinstance(value, (int, float)) and not isinstance(value, bool):
-            if best is None or value > best[1]:
-                best = (row, float(value))
+        if (
+            isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            and (best is None or value > best[1])
+        ):
+            best = (row, float(value))
     return best
 
 
