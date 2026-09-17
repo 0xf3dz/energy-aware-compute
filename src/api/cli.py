@@ -5,7 +5,7 @@ import asyncio
 import json
 import logging
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from api.settings import Settings
@@ -125,7 +125,7 @@ async def _tick(arguments, settings: Settings) -> int:
     from api.runtime import build_runtime
 
     clock = (
-        FakeClock(datetime.now(timezone.utc), arguments.step_seconds)
+        FakeClock(datetime.now(UTC), arguments.step_seconds)
         if arguments.step_seconds
         else None
     )
@@ -164,7 +164,7 @@ async def _enqueue(arguments, settings: Settings) -> int:
 async def _benchmark(arguments, settings: Settings) -> int:
     """Run controlled inference jobs and record energy next to token counts."""
     from api.runtime import build_runtime
-    from contracts import EnergyEstimate, GenerationRequest
+    from contracts import GenerationRequest
 
     runtime = await build_runtime(settings)
     rows: list[dict] = []
@@ -222,7 +222,7 @@ async def _benchmark(arguments, settings: Settings) -> int:
             )
     finally:
         await runtime.close()
-    report = {"generated_at": datetime.now(timezone.utc).isoformat(), "runs": rows,
+    report = {"generated_at": datetime.now(UTC).isoformat(), "runs": rows,
               "summary": _summarize(rows)}
     _print_report(report)
     if arguments.json is not None:
@@ -258,7 +258,7 @@ def _print_report(report: dict) -> None:
         energy_text = "n/a" if energy is None else f"{energy:.4f}"
         rate = row["generation_tokens_per_second"] or 0
         print(
-            f"{row['run']:>3}  {str(row['prompt_tokens']):>10}  {str(row['generated_tokens']):>7}  "
+            f"{row['run']:>3}  {row['prompt_tokens']!s:>10}  {row['generated_tokens']!s:>7}  "
             f"{row['runtime_seconds']:>9.2f}  {rate:>9.2f}  {energy_text:>7}"
         )
     print()
@@ -293,7 +293,7 @@ async def _smoke(arguments, settings: Settings) -> int:
     from api.runtime import build_runtime
 
     settings = settings.model_copy(update={"demo": True, "serve_scheduler": False})
-    clock = FakeClock(datetime.now(timezone.utc).replace(microsecond=0))
+    clock = FakeClock(datetime.now(UTC).replace(microsecond=0))
     runtime = await build_runtime(settings, clock=clock)
     failures = 0
     try:

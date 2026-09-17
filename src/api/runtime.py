@@ -8,7 +8,8 @@ import asyncio
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, time as clock_time
+from datetime import datetime
+from datetime import time as clock_time
 from typing import Any
 
 import httpx
@@ -109,8 +110,10 @@ class Runtime:
         for task in self.tasks:
             try:
                 await task
-            except (asyncio.CancelledError, Exception):
-                pass
+            except asyncio.CancelledError:
+                continue
+            except Exception:
+                logger.exception("Runtime task failed during shutdown")
         closer = getattr(self.inference, "aclose", None)
         if closer is not None:
             await closer()
