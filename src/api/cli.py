@@ -6,6 +6,7 @@ import json
 import logging
 import sys
 from datetime import UTC, datetime, timedelta
+from getpass import getuser
 from pathlib import Path
 
 from api.settings import Settings
@@ -251,6 +252,11 @@ def _summarize(rows: list[dict]) -> dict:
     }
 
 
+def _current_user() -> str:
+    """The account name for a sudoers rule. Never a host name."""
+    return getuser() or "your-user"
+
+
 def _print_report(report: dict) -> None:
     print("run  prompt_tok  gen_tok  runtime_s  gen_tok/s  est_Wh")
     for row in report["runs"]:
@@ -280,7 +286,7 @@ async def _calibrate(arguments, settings: Settings) -> int:
     if estimate.average_power_w is None:
         print(
             "\nNo baseline was measured. powermetrics needs root access. Add a sudoers rule such as:\n"
-            f"  {settings.host}  ALL=(root) NOPASSWD: /usr/bin/powermetrics\n",
+            f"  {_current_user()}  ALL=(root) NOPASSWD: /usr/bin/powermetrics\n",
             file=sys.stderr,
         )
         return 1

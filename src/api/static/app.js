@@ -53,8 +53,9 @@ function render(data) {
     ["Active requests", fmt(live.active_requests, "", 0)],
     ["KV cache usage", fmt(live.kv_cache_usage !== null && live.kv_cache_usage !== undefined
       ? live.kv_cache_usage * 100 : null, "%", 1)],
-    ["Prompt tok/s (server avg)", fmt(live.prompt_tokens_per_second, "", 1)],
-    ["Generation tok/s (server avg)", fmt(live.generation_tokens_per_second, "", 1)],
+    ["Metric window", fmt(live.interval_seconds, "s", 1)],
+    ["Prompt tok/s (window)", fmt(live.prompt_tokens_per_second, "", 1)],
+    ["Generation tok/s (window)", fmt(live.generation_tokens_per_second, "", 1)],
     ["Last request prompt tokens", latest.prompt_tokens ?? "n/a"],
     ["Last request generated tokens", latest.generated_tokens ?? "n/a"],
     ["Last request tok/s", fmt(latest.generation_tokens_per_second, "", 1)],
