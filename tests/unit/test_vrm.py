@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -13,7 +13,7 @@ from jobs.queue import MemoryCache
 from tests.mocks.doubles import fixture_json
 
 DIAGNOSTICS = fixture_json("vrm_diagnostics.json")
-NOW = datetime(2026, 9, 17, 6, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 9, 17, 6, 0, tzinfo=UTC)
 
 
 def test_normalization_reads_the_system_service_only() -> None:

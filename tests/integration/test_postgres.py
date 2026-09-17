@@ -5,7 +5,7 @@ Skipped unless TEST_DATABASE_URL points at a database that the test may clear.
 
 import asyncio
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -28,7 +28,7 @@ from db.migrate import migrate
 DSN = os.environ.get("TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(not DSN, reason="TEST_DATABASE_URL is not set")
 
-NOW = datetime(2026, 9, 17, 6, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 9, 17, 6, 0, tzinfo=UTC)
 
 TABLES = (
     "jobs", "energy_samples", "inference_metrics", "weather_forecasts",
@@ -156,8 +156,10 @@ def test_cancel_and_recover_follow_the_status_rules() -> None:
     assert recovered == 1
     statuses = {job["workload"]: job["status"] for job in snapshot["jobs"]["recent"]}
     assert statuses == {"a": "CANCELLED", "b": "FAILED"}
-    assert "Interrupted" in [job["error"] for job in snapshot["jobs"]["recent"]
-                             if job["workload"] == "b"][0]
+    interrupted = next(
+        job for job in snapshot["jobs"]["recent"] if job["workload"] == "b"
+    )
+    assert "Interrupted" in interrupted["error"]
 
 
 def test_deferral_moves_a_queued_job_to_waiting_for_energy() -> None:

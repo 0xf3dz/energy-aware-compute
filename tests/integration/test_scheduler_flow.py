@@ -1,16 +1,13 @@
 """The scheduling scenarios from the specification, with no external service."""
 
 import asyncio
-from datetime import datetime, time, timedelta, timezone
-
-import pytest
+from datetime import UTC, datetime, time, timedelta
 
 from contracts import (
-    EnergyEstimate,
     Availability,
+    EnergyEstimate,
     EnergyState,
     Job,
-    JobResult,
     JobStatus,
     Location,
 )
@@ -25,7 +22,7 @@ from tests.mocks.doubles import FakeEnergyProvider, FrozenClock, RecordingWorklo
 from workloads.weather import MockWeatherProvider, WeatherBriefingWorkload
 from workloads.weather.provider import synthetic_forecast
 
-START = datetime(2026, 9, 17, 6, 0, tzinfo=timezone.utc)
+START = datetime(2026, 9, 17, 6, 0, tzinfo=UTC)
 LOCATION = Location(latitude=-27.0, longitude=154.0)
 
 
@@ -271,7 +268,7 @@ def test_a_new_scheduler_survives_a_restart_with_the_same_queue() -> None:
         decision = await harness.tick()
         return harness, decision
 
-    harness, decision = asyncio.run(main())
+    _, decision = asyncio.run(main())
     assert decision.decision == "DEFER"
     assert decision.reason.startswith("Battery state of charge 37%")
 

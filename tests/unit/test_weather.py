@@ -1,7 +1,7 @@
 """Forecast normalization, deterministic parsing, and briefing generation."""
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -15,13 +15,13 @@ from workloads.weather import (
     OpenMeteoProvider,
     WeatherBriefingWorkload,
     WeatherUnavailable,
+    parser,
 )
-from workloads.weather import parser
 from workloads.weather.provider import synthetic_forecast
 
 WEATHER = fixture_json("openmeteo_forecast.json")
 MARINE = fixture_json("openmeteo_marine.json")
-NOW = datetime(2026, 9, 17, 3, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 9, 17, 3, 0, tzinfo=UTC)
 LOCATION = Location(latitude=-27.0, longitude=154.0)
 
 
@@ -120,7 +120,7 @@ def test_warnings_come_from_measured_values_and_thresholds() -> None:
     forecast = synthetic_forecast(LOCATION, NOW, hours=6)
     notes = parser.warnings(forecast, {"gust_kn": 15.0})
     assert any("Gusts" in note and "limit 15" in note for note in notes)
-    raised = {name: 999.0 for name in parser.DEFAULT_THRESHOLDS}
+    raised = dict.fromkeys(parser.DEFAULT_THRESHOLDS, 999.0)
     assert parser.warnings(forecast, raised) == []
 
 

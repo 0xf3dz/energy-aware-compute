@@ -2,7 +2,7 @@
 
 import json
 import plistlib
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -111,7 +111,7 @@ class RecordingWorkload:
 
 class FrozenClock:
     def __init__(self, start: datetime | None = None, step_seconds: float = 0) -> None:
-        self.now = start or datetime(2026, 9, 17, 6, 0, tzinfo=timezone.utc)
+        self.now = start or datetime(2026, 9, 17, 6, 0, tzinfo=UTC)
         self.step = timedelta(seconds=step_seconds)
 
     def __call__(self) -> datetime:

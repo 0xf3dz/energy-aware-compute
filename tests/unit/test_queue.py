@@ -1,8 +1,7 @@
 """Queue semantics that the scheduler and the tests rely on."""
 
 import asyncio
-from datetime import datetime, timedelta, timezone
-
+from datetime import UTC, datetime, timedelta
 
 from contracts import (
     Availability,
@@ -15,7 +14,7 @@ from contracts import (
 )
 from jobs.queue import MemoryCache, MockQueue
 
-NOW = datetime(2026, 9, 17, 6, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 9, 17, 6, 0, tzinfo=UTC)
 
 
 def queue() -> MockQueue:

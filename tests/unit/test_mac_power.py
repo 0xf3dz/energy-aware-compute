@@ -1,7 +1,7 @@
 """powermetrics stream framing, sample parsing, integration, and attribution."""
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -43,7 +43,7 @@ class FakeProcess:
 
 def sample(at: float, power_w: float | None) -> PowerSample:
     return PowerSample(
-        at=at, timestamp=datetime.now(timezone.utc), combined_power_w=power_w
+        at=at, timestamp=datetime.now(UTC), combined_power_w=power_w
     )
 
 

@@ -1,26 +1,27 @@
 """Admission policy: safety floor, surplus hysteresis, deadlines, priority."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from contracts import Availability, Job
 from scheduler.policies import Policy
 
-NOW = datetime(2026, 9, 17, 6, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 9, 17, 6, 0, tzinfo=UTC)
 
 
 def policy(**kwargs) -> Policy:
-    defaults = dict(
-        safety_floor_soc=40, high_soc=85, surplus_w=250, surplus_hold_seconds=300,
-        max_age_seconds=300, max_sample_gap_seconds=120, max_stale_seconds=3600,
-    )
+    defaults = {
+        "safety_floor_soc": 40, "high_soc": 85, "surplus_w": 250,
+        "surplus_hold_seconds": 300, "max_age_seconds": 300,
+        "max_sample_gap_seconds": 120, "max_stale_seconds": 3600,
+    }
     return Policy(**{**defaults, **kwargs})
 
 
 def job(**kwargs) -> Job:
-    defaults = dict(workload="weather_briefing", priority=20, deferrable=True,
-                    scheduled_at=NOW - timedelta(minutes=1))
+    defaults = {"workload": "weather_briefing", "priority": 20, "deferrable": True,
+                "scheduled_at": NOW - timedelta(minutes=1)}
     return Job(**{**defaults, **kwargs})
 
 
