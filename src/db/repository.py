@@ -341,9 +341,11 @@ class PostgresQueue:
             f"COUNT(*) AS requests FROM inference_metrics WHERE recorded_at >= {TODAY}"
         )
         inference = await cursor.fetchone()
+        # A job with no measurement must not read as zero Wh. Report the sum of
+        # the measurements, or null when no job has a measurement today.
         cursor = await connection.execute(
-            f"SELECT COUNT(*) AS completed, "
-            f"COALESCE(SUM(actual_estimated_energy_wh), 0) AS energy_wh FROM jobs "
+            f"SELECT COUNT(*) AS completed, COUNT(actual_estimated_energy_wh) AS measured, "
+            f"SUM(actual_estimated_energy_wh) AS energy_wh FROM jobs "
             f"WHERE status = 'COMPLETED' AND completed_at >= {TODAY}"
         )
         jobs = await cursor.fetchone()
@@ -359,7 +361,9 @@ class PostgresQueue:
         return {
             "generated_tokens": int(inference["tokens"]),
             "inference_requests": int(inference["requests"]),
-            "estimated_inference_wh": round(float(jobs["energy_wh"]), 6),
+            "estimated_inference_wh": (
+                round(float(jobs["energy_wh"]), 6) if jobs["measured"] else None
+            ),
             "jobs_completed": int(jobs["completed"]),
             "jobs_deferred_to_solar": int(deferred["deferred"]),
             "jobs_waiting_for_energy": int(waiting["waiting"]),

@@ -134,6 +134,9 @@ def test_a_failed_job_keeps_its_error_and_its_energy_sample() -> None:
     assert "no forecast" in recent["error"]
     assert recent["result"] is None
     assert samples == 1  # the estimate is stored even without a result
+    # The estimate carries no value, so the day total is unknown, not zero.
+    assert snapshot["today"]["estimated_inference_wh"] is None
+    assert snapshot["today"]["jobs_completed"] == 0
 
 
 def test_cancel_and_recover_follow_the_status_rules() -> None:

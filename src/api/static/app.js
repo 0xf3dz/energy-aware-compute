@@ -86,7 +86,8 @@ function render(data) {
   rows("today", [
     ["Generated tokens", today.generated_tokens ?? 0],
     ["Inference requests", today.inference_requests ?? 0],
-    ["Estimated inference energy", fmt(today.estimated_inference_wh, "Wh", 3)],
+    ["Estimated inference energy", today.estimated_inference_wh == null
+      ? "not measured" : fmt(today.estimated_inference_wh, "Wh", 3)],
     ["Jobs completed", today.jobs_completed ?? 0],
     ["Jobs deferred to solar", today.jobs_deferred_to_solar ?? 0],
     ["Jobs waiting for energy", today.jobs_waiting_for_energy ?? 0],

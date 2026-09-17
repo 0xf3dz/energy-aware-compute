@@ -174,12 +174,16 @@ def _today(jobs: dict[str, Job], decisions: list[Decision]) -> dict[str, Any]:
         for item in (job.result or {}).get("inference_metrics", []):
             tokens += item.get("generated_tokens") or 0
             requests += 1
+    measured = [
+        job.actual_estimated_energy_wh
+        for job in completed
+        if job.actual_estimated_energy_wh is not None
+    ]
     return {
         "generated_tokens": tokens,
         "inference_requests": requests,
-        "estimated_inference_wh": round(
-            sum(job.actual_estimated_energy_wh or 0 for job in completed), 6
-        ),
+        # An unmeasured job is not zero Wh. No measurement means null.
+        "estimated_inference_wh": round(sum(measured), 6) if measured else None,
         "jobs_completed": len(completed),
         "jobs_deferred_to_solar": len({item.job_id for item in decisions if item.decision == "DEFER"}),
         "jobs_waiting_for_energy": len(_by_status(jobs, JobStatus.WAITING_FOR_ENERGY)),
