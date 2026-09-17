@@ -19,10 +19,8 @@ def extract_documents(buffer: bytes) -> tuple[list[dict[str, Any]], bytes]:
         if marker < 0:
             return documents, buffer
         slice_end = marker + len(DOCUMENT_END)
-        chunk = buffer[:slice_end]
+        chunk = buffer[:slice_end].lstrip(b"\x00 \t\r\n")
         buffer = buffer[slice_end:]
-        if chunk.lstrip().startswith(b"\x00"):
-            chunk = chunk.lstrip(b"\x00")
         try:
             document = plistlib.loads(chunk)
         except Exception:  # a malformed sample must not stop collection

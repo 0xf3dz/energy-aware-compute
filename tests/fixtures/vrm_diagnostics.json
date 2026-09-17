@@ -1,0 +1,13 @@
+{
+  "_note": "Synthetic VRM diagnostics response in the documented record shape. Not captured from a live installation.",
+  "success": true,
+  "num_records": 6,
+  "records": [
+    {"dbusServiceType": "system", "dbusPath": "/Dc/Battery/Soc", "rawValue": 91, "timestamp": 1789000000, "instance": 0},
+    {"dbusServiceType": "system", "dbusPath": "/Dc/Battery/Power", "rawValue": 450, "timestamp": 1789000000, "instance": 0},
+    {"dbusServiceType": "system", "dbusPath": "/Dc/Pv/Power", "rawValue": 750, "timestamp": 1789000000, "instance": 0},
+    {"dbusServiceType": "system", "dbusPath": "/Ac/Consumption/L1/Power", "rawValue": 300, "timestamp": 1789000000, "instance": 0},
+    {"dbusServiceType": "system", "dbusPath": "/Ac/Consumption/NumberOfPhases", "rawValue": 1, "timestamp": 1789000000, "instance": 0},
+    {"dbusServiceType": "battery", "dbusPath": "/Dc/0/Soc", "rawValue": 12, "timestamp": 1789000000, "instance": 277}
+  ]
+}

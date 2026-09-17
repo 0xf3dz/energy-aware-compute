@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Synthetic sample in the documented shape of `powermetrics --format plist`.
+     Power values are milliwatts. `energy_impact` is the unlabelled relative
+     score of the tasks sampler. -->
+<plist version="1.0">
+<dict>
+	<key>timestamp</key>
+	<string>2026-09-17 03:00:00 +0000</string>
+	<key>elapsed_ns</key>
+	<integer>1000000000</integer>
+	<key>processor</key>
+	<dict>
+		<key>cpu_power</key>
+		<real>14250.0</real>
+		<key>gpu_power</key>
+		<real>21000.0</real>
+		<key>combined_power</key>
+		<real>35250.0</real>
+	</dict>
+	<key>tasks</key>
+	<array>
+		<dict>
+			<key>pid</key>
+			<integer>45323</integer>
+			<key>name</key>
+			<string>llama-server</string>
+			<key>cputime_ns</key>
+			<integer>1450000000</integer>
+			<key>gputime_ns</key>
+			<integer>16200000000</integer>
+			<key>energy_impact</key>
+			<integer>312</integer>
+		</dict>
+		<dict>
+			<key>pid</key>
+			<integer>1</integer>
+			<key>name</key>
+			<string>launchd</string>
+			<key>cputime_ns</key>
+			<integer>21000000</integer>
+			<key>energy_impact</key>
+			<integer>1</integer>
+		</dict>
+	</array>
+</dict>
+</plist>

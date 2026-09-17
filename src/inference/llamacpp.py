@@ -142,8 +142,8 @@ class LlamaCppProvider:
             if not choices:
                 raise ValueError("no choices")
             text = choices[0]["message"]["content"] or ""
-        except (KeyError, IndexError, TypeError) as exc:
-            raise InferenceUnavailable("Inference response has no message content") from exc
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            raise InferenceUnavailable(f"Inference response has no message content: {exc}") from exc
         timings = payload.get("timings") or {}
         usage = payload.get("usage") or {}
         runtime = 0.0
