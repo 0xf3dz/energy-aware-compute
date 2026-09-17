@@ -1,13 +1,38 @@
-# Energy aware compute
+# What is this?
 
 A local compute scheduler for a solar powered sailing vessel. The system runs
-local Qwen inference on a Mac Studio, measures the energy that the inference
+local Qwen inference on a 32GB M2 Max Studio, measures the energy that the inference
 uses, and moves deferrable work into the hours with a solar surplus.
 
 The system schedules compute. It does not replace the Victron VRM dashboard.
 Use VRM for electrical analysis. The dashboard of this project answers one
 question: which compute does the machine run, and why?
 
+# For what purpose?
+
+This repository is a prototype for a local inference lab aboard my sailboat, with solar energy as its only power
+source. The goal is to use local AI within the limits of the boat’s energy supply.
+
+A boat has a limited energy budget. Navigation equipment and other vessel systems take priority over optional
+compute. The scheduler uses battery charge and available solar power to decide whether a task can run or must wait.
+
+The first workload is a daily marine weather briefing. The system downloads a forecast, calculates trends and
+warnings, then asks local Qwen to produce a readable report. Future workloads could include document search,
+maintenance-log analysis, and passage preparation.
+
+The prototype will help answer these questions:
+
+- How much estimated energy does each inference task use?
+- Which workloads can the Mac Studio complete within the available energy budget?
+- When can surplus solar power support optional compute?
+- Which tasks must wait to protect the battery reserve?
+
+Local inference keeps model execution aboard the boat and avoids dependence on a cloud AI service. Fresh weather
+forecasts and VRM data still need internet access. But these can be downloaded in weekly batches, assuming internet access 
+remains available at least once a week.
+
+The aim is to establish a measured solution for a useful onboard AI system.
+ 
 ## Architecture
 
 ```text
