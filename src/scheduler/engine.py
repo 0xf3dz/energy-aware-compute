@@ -23,7 +23,7 @@ from contracts import (
     utcnow,
 )
 from jobs.worker import Worker
-from scheduler.models import CRITICAL_PRIORITY, DEFER, RUN, WAIT
+from scheduler.models import DEFER, RUN
 from scheduler.policies import Policy
 
 logger = logging.getLogger(__name__)

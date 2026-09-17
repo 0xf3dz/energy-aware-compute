@@ -5,10 +5,10 @@ from scheduler.policies import Policy
 
 __all__ = [
     "CRITICAL_PRIORITY",
-    "DailySchedule",
     "DEFER",
-    "Policy",
     "RUN",
-    "Scheduler",
     "WAIT",
+    "DailySchedule",
+    "Policy",
+    "Scheduler",
 ]

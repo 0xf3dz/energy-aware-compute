@@ -12,12 +12,12 @@ DEFER = "DEFER"
 __all__ = [
     "CRITICAL_PRIORITY",
     "DEFER",
-    "Decision",
-    "EnergyState",
     "HIGH_PRIORITY",
-    "Job",
-    "JobStatus",
     "LOW_PRIORITY",
     "RUN",
     "WAIT",
+    "Decision",
+    "EnergyState",
+    "Job",
+    "JobStatus",
 ]
