@@ -1,7 +1,21 @@
 from pathlib import Path
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# An empty value in .env means "not set". The template ships every optional
+# setting blank, so a blank value must not fail validation.
+BLANK_AS_NONE = (
+    "llama_pid",
+    "idle_baseline_w",
+    "vrm_token",
+    "vrm_installation_id",
+    "latitude",
+    "longitude",
+    "dashboard_token",
+    "llama_api_key",
+    "llama_api_key_file",
+)
 
 
 class Settings(BaseSettings):
@@ -33,6 +47,13 @@ class Settings(BaseSettings):
     energy_max_age_seconds: float = Field(default=300, gt=0)
     poll_seconds: float = Field(default=30, gt=0)
     workload_plugins: list[str] = Field(default_factory=list)
+
+    @field_validator(*BLANK_AS_NONE, mode="before")
+    @classmethod
+    def blank_is_unset(cls, value):
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
     @model_validator(mode="after")
     def validate_configuration(self):
