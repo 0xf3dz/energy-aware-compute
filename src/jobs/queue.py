@@ -187,10 +187,11 @@ def _today(jobs: dict[str, Job], decisions: list[Decision]) -> dict[str, Any]:
 
 
 def _inference(jobs: dict[str, Job]) -> dict[str, Any]:
-    metrics: list[dict[str, Any]] = []
-    for job in _recent(jobs, limit=20):
-        for item in (job.result or {}).get("inference_metrics", []):
-            metrics.append(item)
+    metrics: list[dict[str, Any]] = [
+        item
+        for job in _recent(jobs, limit=20)
+        for item in (job.result or {}).get("inference_metrics", [])
+    ]
     return {"latest": metrics[0] if metrics else None, "recent": metrics[:20]}
 
 
