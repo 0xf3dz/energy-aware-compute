@@ -26,4 +26,15 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [tool.ruff]
-line-length = 100
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "PERF", "RUF", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test doubles use asserts and literal tokens.
+"tests/**" = ["S101", "S105", "S106"]
+# Every statement is built from module-level column constants and passes each
+# value as a query parameter.
+"src/db/repository.py" = ["S608"]
