@@ -8,10 +8,7 @@ from importlib.resources import files
 
 from psycopg import AsyncConnection
 
-# Distinct locks for schema changes, runtime ownership, and job claims.
-MIGRATION_LOCK = 0x45414301
-OWNERSHIP_LOCK = 0x45414302
-CLAIM_LOCK = 0x45414303
+from db.locks import MIGRATION_LOCK
 
 
 async def migrate(connection: AsyncConnection) -> None:

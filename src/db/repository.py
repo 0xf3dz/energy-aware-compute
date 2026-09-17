@@ -23,7 +23,7 @@ from contracts import (
     JobResult,
     JobStatus,
 )
-from db.migrate import CLAIM_LOCK, OWNERSHIP_LOCK, migrate
+from db.locks import CLAIM_LOCK, OWNERSHIP_LOCK
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +57,9 @@ class PostgresQueue:
         )
 
     async def open(self) -> None:
+        # Imported here so that `python -m db.migrate` does not import itself.
+        from db.migrate import migrate
+
         await self.pool.open(wait=True, timeout=30)
         if self.migrate_on_open:
             async with self.pool.connection() as connection:

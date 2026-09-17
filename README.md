@@ -274,6 +274,14 @@ python -m api.cli smoke          # offline scheduling demonstration
 TEST_DATABASE_URL=... pytest -q  # adds the PostgreSQL tests
 ```
 
+Use a separate database for `TEST_DATABASE_URL`. The PostgreSQL tests truncate
+their tables:
+
+```bash
+createdb -h 127.0.0.1 -p 55432 energy_compute_test
+TEST_DATABASE_URL=postgresql://127.0.0.1:55432/energy_compute_test pytest -q
+```
+
 Every external dependency has a double: `MockVRMProvider`,
 `MockWeatherProvider`, `MockInferenceProvider`, `MockEnergyMonitor`, and an
 in-memory queue. The test suite needs no boat, no VRM, no weather API, no Qwen,
