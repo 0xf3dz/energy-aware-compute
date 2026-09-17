@@ -1,0 +1,291 @@
+# Energy aware compute
+
+A local compute scheduler for a solar powered sailing vessel. The system runs
+local Qwen inference on a Mac Studio, measures the energy that the inference
+uses, and moves deferrable work into the hours with a solar surplus.
+
+The system schedules compute. It does not replace the Victron VRM dashboard.
+Use VRM for electrical analysis. The dashboard of this project answers one
+question: which compute does the machine run, and why?
+
+## Architecture
+
+```text
+        Victron VRM            Weather API
+             |                      |
+             v                      v
+      energy/vrm             workloads/weather
+             |                      |
+             v                      |
+      EnergyState                   |
+             |                      |
+             +----------+-----------+
+                        v
+                   scheduler  (policy: SOC, surplus, deadline, priority)
+                        |
+                        v
+                    jobs/queue  (PostgreSQL)
+                        |
+                        v
+                 workloads (weather_briefing, future services)
+                        |
+                        v
+                 inference (llama.cpp, OpenAI compatible)
+                        |
+                        v
+                      Qwen
+
+                 powermetrics --> energy/mac_power --> EnergyEstimate
+```
+
+One rule holds everywhere: a workload depends on interfaces only. A workload
+never calls VRM, `powermetrics`, llama.cpp, or another workload.
+
+## Module map
+
+| Path | Responsibility |
+| --- | --- |
+| `src/contracts.py` | Typed models and provider protocols. The shared interface. |
+| `src/inference/` | `LlamaCppProvider` and `MockInferenceProvider`. |
+| `src/energy/vrm/` | VRM adapter. Normalizes responses into `EnergyState`. |
+| `src/energy/mac_power/` | `powermetrics` sampling and energy attribution. |
+| `src/scheduler/` | Policy, engine, vocabulary. |
+| `src/jobs/` | Worker and the in-memory queue double. |
+| `src/db/` | PostgreSQL queue, cache, migrations, dashboard read model. |
+| `src/workloads/` | Pluggable workloads. The weather briefing is the first. |
+| `src/api/` | Settings, composition root, FastAPI dashboard, CLI. |
+
+## Install
+
+```bash
+scripts/setup.sh
+cp .env.example .env        # then fill in the values
+docker compose up -d postgres
+.venv/bin/python -m db.migrate
+```
+
+The database is optional for a demonstration. Set `DEMO=1` to run with mock
+providers and an in-memory queue.
+
+## Configure
+
+Put the VRM access token, the installation identifier, and the forecast
+position in `.env`. The file `.env.example` lists every setting.
+
+A VRM token comes from the VRM portal under Preferences, Access tokens.
+Deferrable work needs `LATITUDE` and `LONGITUDE` for the weather briefing.
+
+## Run
+
+```bash
+.venv/bin/python -m api.cli serve --host 0.0.0.0 --port 8090   # dashboard + scheduler
+.venv/bin/python -m api.cli tick --count 5                     # scheduler only
+.venv/bin/python -m api.cli enqueue-briefing --deferrable --priority 20
+.venv/bin/python -m api.cli benchmark --runs 5 --max-tokens 256
+.venv/bin/python -m api.cli calibrate --seconds 10
+.venv/bin/python -m api.cli smoke                              # offline check
+scripts/start-inference.sh                                     # llama-server
+```
+
+The dashboard listens on port 8090. A LAN bind needs `DASHBOARD_TOKEN`, and the
+token is then read from the query string or from a bearer header.
+
+## Inference
+
+`LlamaCppProvider` speaks the OpenAI chat API of `llama-server`. It reads the
+per-request `timings` block for token counts and rates, and `GET /metrics` for
+the server counters and gauges. Start the server with `--metrics`.
+
+Telemetry that the system collects:
+
+| Metric | Source |
+| --- | --- |
+| prompt tokens, generated tokens | `timings` of the request |
+| prompt tok/s, generation tok/s | `timings` of the request |
+| active requests | `llamacpp:requests_processing` |
+| KV cache usage | `llamacpp:kv_cache_usage_ratio` |
+
+The provider reports server counters as differences between two calls, so the
+window is explicit in `interval_seconds`.
+
+## Compute energy
+
+`PowermetricsProvider` measures the estimated SoC power of the Mac, integrates
+the samples over the runtime of a job, and subtracts a calibrated idle
+baseline. The result carries three explicit fields:
+
+```text
+estimated_wh        the estimate, or null
+measurement_method  "powermetrics"
+confidence          "estimated"
+```
+
+The estimate is not metered AC consumption. `powermetrics` reports estimated
+power. The reason string states the method, the sample count, the covered
+seconds, the baseline, and the caveats.
+
+The provider reports a number only when both conditions hold:
+
+1. `powermetrics` runs. It needs root. The provider calls `sudo -n`, so a
+   missing privilege becomes an immediate, recorded failure.
+2. The `llama-server` process appears in the per-process samples.
+
+Add a `sudoers` rule to allow the sampler without a password:
+
+```text
+f3dz ALL=(root) NOPASSWD: /usr/bin/powermetrics
+```
+
+Run `api.cli calibrate` on an idle machine and put the measured power in
+`IDLE_BASELINE_W`. Without a baseline the estimate stays `null` and the reason
+names the missing step.
+
+A future `SmartPlugProvider` or `VictronMeterProvider` implements the same
+`ComputeEnergyMonitor` interface. The rest of the system does not change.
+
+## VRM energy state
+
+`VRMProvider` reads the diagnostics endpoint of one installation and normalizes
+the documented system paths into `EnergyState`:
+
+```text
+battery_soc, solar_power_w, battery_power_w, ac_load_w, solar_forecast_wh
+```
+
+Rules of the adapter:
+
+- Read the `system` service only. Do not add the values of physical batteries
+  or chargers to the aggregate measurements.
+- Mark a measurement `STALE` when it is older than the freshness limit, and
+  `UNAVAILABLE` when no value exists.
+- Keep the last good response in the cache, so an internet outage does not stop
+  the scheduler.
+- Respect `Retry-After` on a 429 response.
+- Never send raw VRM JSON to a workload.
+
+VRM supplies no solar forecast on the diagnostics endpoint, so
+`solar_forecast_wh` stays null. The scheduler uses a forecast budget only when
+a provider supplies the value.
+
+## Weather and the daily briefing
+
+```text
+Weather API -> provider -> Forecast -> deterministic parser
+            -> compact table + trends + warnings -> inference -> briefing
+```
+
+The parser computes every number: extremes, totals, the pressure drop, the
+direction shift, and the safety notes. The model interprets those numbers and
+writes the text. The model must not invent a measurement, and it must name the
+fields that are absent.
+
+The job stores the raw API payload, the normalized forecast, the prompt, and
+the generated text. Each briefing is auditable.
+
+## Scheduling policy
+
+The policy reads job metadata only. It never tests a workload name.
+
+| Situation | Decision |
+| --- | --- |
+| Start time in the future | `WAIT`, the job stays `QUEUED` |
+| Battery SOC unknown | `DEFER` |
+| Battery SOC at or below the floor | `DEFER`, for every job |
+| Priority 100 or more | `RUN` above the floor |
+| Not deferrable | `RUN` above the floor |
+| Deadline inside the runtime lead | `RUN` above the floor |
+| SOC below the high threshold | `DEFER` |
+| Surplus below the threshold | `DEFER` |
+| Surplus above the threshold for less than the hold period | `DEFER` |
+| Estimated energy above the forecast budget | `DEFER` |
+| All conditions hold | `RUN` |
+
+The safety floor applies to critical jobs as well. An empty battery stops the
+boat, not the queue.
+
+Hysteresis protects against a short spike and against a passing cloud. The hold
+uses distinct, timely samples. A repeated cached sample cannot prove that a
+surplus continued. A sample gap clears the hold. A stale but recent measurement
+may still guard the floor for a critical or deadline job.
+
+Every decision goes to `scheduler_decisions` with the energy state and a reason
+in words:
+
+```json
+{
+  "job": "document-ingestion-41",
+  "decision": "DEFER",
+  "battery_soc": 61,
+  "solar_surplus_w": 83,
+  "reason": "Solar surplus 83 W is below the 250 W threshold"
+}
+```
+
+## Add a workload
+
+1. Write a class with one method: `async def run(self, job: Job) -> JobResult`.
+2. Give the constructor the providers that it needs.
+3. Register the class in `build_runtime` in `src/api/runtime.py`.
+4. Queue a job with `workload="<name>"` and the metadata: `priority`,
+   `deadline`, `deferrable`, `estimated_energy_wh`.
+5. Add a mock provider and a test.
+
+No change is necessary in the scheduler, in the energy monitor, or in the
+inference layer. A plugin can also register itself through `Worker.register`
+or through a daily schedule with `Scheduler.register_daily`.
+
+Example job metadata:
+
+```python
+Job(workload="document_ingestion", priority=20, deadline=None,
+    deferrable=True, estimated_energy_wh=40)
+```
+
+## Offline behaviour
+
+Local components keep working without internet:
+
+```text
+PostgreSQL, scheduler, llama.cpp, Qwen, energy monitor, cache, dashboard
+```
+
+The VRM adapter and the weather provider return `STALE` with cached data, or
+`UNAVAILABLE` with a reason. A workload that has no forecast fails with an
+explicit error. The system never fabricates a measurement.
+
+## Dashboard
+
+The dashboard shows four blocks:
+
+| Block | Content |
+| --- | --- |
+| ENERGY | SOC, solar power, load, surplus, forecast, source status |
+| INFERENCE | model, server status, tok/s, requests, KV usage |
+| SCHEDULER | mode, monitor, thresholds, running and deferred jobs, last reason |
+| TODAY | generated tokens, estimated Wh, jobs completed, jobs deferred |
+
+The footer links to VRM for electrical detail.
+
+## Tests and CI
+
+```bash
+pytest -q                        # unit and integration tests
+python -m api.cli smoke          # offline scheduling demonstration
+TEST_DATABASE_URL=... pytest -q  # adds the PostgreSQL tests
+```
+
+Every external dependency has a double: `MockVRMProvider`,
+`MockWeatherProvider`, `MockInferenceProvider`, `MockEnergyMonitor`, and an
+in-memory queue. The test suite needs no boat, no VRM, no weather API, no Qwen,
+no `llama.cpp`, and no Apple silicon. The CI workflow runs lint, migrations,
+the tests, and the offline demonstration.
+
+## Repository layout
+
+```text
+src/{contracts.py,inference,energy,jobs,db,scheduler,workloads,api}
+tests/{unit,integration,mocks,fixtures}
+scripts/{setup.sh,start-inference.sh,smoke-test.sh,power-probe.sh}
+.github/workflows/ci.yml
+docker-compose.yml
+```
