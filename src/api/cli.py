@@ -1,4 +1,4 @@
-"""Command line entry point: ``energy-compute <command>``."""
+"""Command line entry point: ``offgrid-inference <command>``."""
 
 import argparse
 import asyncio
@@ -36,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="energy-compute", description=__doc__)
+    parser = argparse.ArgumentParser(prog="offgrid-inference", description=__doc__)
     parser.add_argument("-v", "--verbose", action="store_true", help="debug logging")
     commands = parser.add_subparsers(dest="command", required=True)
 

@@ -288,7 +288,7 @@ class PowermetricsProvider(ComputeEnergyMonitor):
             base.runtime_seconds = elapsed
             base.reason = (
                 "Idle baseline is not calibrated, so sampled system power cannot be attributed "
-                f"to compute. Run 'energy-compute calibrate'. {CAVEAT}"
+                f"to compute. Run 'offgrid-inference calibrate'. {CAVEAT}"
             )
             return base
         valued = [sample for sample in samples if sample.power_w() is not None]
