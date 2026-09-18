@@ -72,6 +72,67 @@ def test_conflicting_measurements_for_one_path_are_rejected() -> None:
         parse_diagnostics(raw, NOW, 300)
 
 
+def _with_vebus_phases(count=1):
+    raw = _records()
+    raw["records"] = [
+        item for item in raw["records"]
+        if item["dbusPath"] != "/Ac/Consumption/NumberOfPhases"
+    ]
+    raw["records"].append({
+        "dbusServiceType": "vebus", "instance": 276,
+        "dbusPath": "/Ac/NumberOfPhases", "rawValue": count,
+        "timestamp": (NOW - timedelta(days=30)).timestamp(),
+    })
+    return raw
+
+
+def test_vebus_configuration_enables_fresh_system_load_and_surplus() -> None:
+    state = parse_diagnostics(_with_vebus_phases(), NOW, 300)
+    assert state.ac_load_w == 300
+    assert state.surplus_w == 450
+    assert state.availability == Availability.FRESH
+    assert state.timestamp == NOW
+
+
+def test_missing_phase_power_does_not_underestimate_load() -> None:
+    state = parse_diagnostics(_with_vebus_phases(3), NOW, 300)
+    assert state.ac_load_w is None
+    assert state.surplus_w is None
+
+
+def test_multiple_vebus_systems_do_not_supply_an_ambiguous_phase_count() -> None:
+    raw = _with_vebus_phases()
+    raw["records"].append({**raw["records"][-1], "instance": 277})
+    assert parse_diagnostics(raw, NOW, 300).ac_load_w is None
+
+
+def test_poll_interval_refreshes_cache_at_the_configured_boundary() -> None:
+    async def scenario():
+        now = NOW
+        calls = 0
+
+        async def handler(request):
+            nonlocal calls
+            calls += 1
+            return httpx.Response(200, json=_records())
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            source = VRMProvider(
+                client, MemoryCache(), "12345", "token-value",
+                base_url="https://vrm.test/v2", poll_interval_seconds=5,
+                clock=lambda: now,
+            )
+            await source.current()
+            now += timedelta(seconds=4)
+            await source.current()
+            assert calls == 1
+            now += timedelta(seconds=1)
+            await source.current()
+            assert calls == 2
+
+    asyncio.run(scenario())
+
+
 def provider(handler, cache=None, **kwargs) -> VRMProvider:
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     return VRMProvider(

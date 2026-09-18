@@ -75,20 +75,49 @@ def parse_diagnostics(raw: dict[str, Any], now: datetime, freshness_seconds: flo
     # Never infer AC-coupled PV or a total from missing device readings.
     solar = measurement("/Dc/Pv/Power", minimum=0)
     phases = paths.get("/Ac/Consumption/NumberOfPhases")
+    phase_count = phases[0] if phases is not None else _vebus_phase_count(records, now)
     load = None
-    if phases is not None and phases[0] in (1, 2, 3):
-        phase_paths = [f"/Ac/Consumption/L{n}/Power" for n in range(1, int(phases[0]) + 1)]
+    if phase_count in (1, 2, 3):
+        phase_paths = [f"/Ac/Consumption/L{n}/Power" for n in range(1, int(phase_count) + 1)]
         if all(path in paths and paths[path][0] >= 0 for path in phase_paths):
             load = sum(paths[path][0] for path in phase_paths)
             used.extend(paths[path][1] for path in phase_paths)
-            used.append(phases[1])
+        # Phase count is configuration, not a power sample. VRM retains its
+        # original timestamp until it changes; it must not age fresh power.
     if not used:
         return EnergyState(timestamp=now, reason="No usable timestamped system measurements")
     stamp = min(used)  # Conservative age of the oldest contributing measurement.
     stale = (now - stamp).total_seconds() > freshness_seconds
     reasons = ["Solar power covers measured DC-coupled PV only; AC-coupled PV is excluded"]
+    if load is None:
+        reasons.append("AC load requires an unambiguous phase count and power for every phase")
     if stale:
         reasons.append("VRM measurement age exceeds freshness limit")
     return EnergyState(timestamp=stamp, availability=Availability.STALE if stale else Availability.FRESH,
                        battery_soc=soc, solar_power_w=solar, battery_power_w=battery,
                        ac_load_w=load, reason="; ".join(reasons))
+
+
+def _vebus_phase_count(records: list, now: datetime) -> float | None:
+    """Use configuration from one VE.Bus system, never device power totals."""
+    candidates = set()
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        if record.get("dbusServiceType") not in ("vebus", "com.victronenergy.vebus"):
+            continue
+        if record.get("dbusPath") != "/Ac/NumberOfPhases":
+            continue
+        value, stamp = record.get("rawValue"), record.get("timestamp")
+        if isinstance(value, bool) or isinstance(stamp, bool):
+            return None
+        try:
+            value = float(value)
+            stamp = datetime.fromtimestamp(float(stamp), UTC)
+            instance = int(record["instance"])
+        except (KeyError, ValueError, TypeError, OverflowError, OSError):
+            return None
+        if value not in (1, 2, 3) or stamp > now:
+            return None
+        candidates.add((instance, value))
+    return next(iter(candidates))[1] if len(candidates) == 1 else None
