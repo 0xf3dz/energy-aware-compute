@@ -103,6 +103,8 @@ def test_a_job_round_trips_with_all_evidence() -> None:
     assert snapshot["jobs"]["recent"][0]["status"] == "COMPLETED"
     assert snapshot["latest_briefing"]["text"] == "Wind 12 knots."
     assert snapshot["inference"]["latest"]["generated_tokens"] == 120
+    # 0.25 Wh over 120 tokens is 7.5 J per token, from the same stored estimate.
+    assert snapshot["inference"]["latest"]["joules_per_generated_token"] == pytest.approx(7.5)
     assert snapshot["today"]["generated_tokens"] == 120
     assert snapshot["today"]["estimated_inference_wh"] == 0.25
     assert snapshot["today"]["jobs_completed"] == 1

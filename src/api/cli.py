@@ -215,6 +215,9 @@ async def _benchmark(arguments, settings: Settings) -> int:
                     "generation_tokens_per_second": metrics.generation_tokens_per_second,
                     "prompt_tokens_per_second": metrics.prompt_tokens_per_second,
                     "estimated_wh": estimate.estimated_wh,
+                    "joules_per_generated_token": estimate.joules_per_generated_token(
+                        metrics.generated_tokens
+                    ),
                     "measurement_method": estimate.measurement_method,
                     "confidence": estimate.confidence,
                     "average_power_w": estimate.average_power_w,
@@ -247,6 +250,9 @@ def _summarize(rows: list[dict]) -> dict:
         "estimated_wh_per_million_tokens": round(energy / generated * 1e6, 4)
         if energy is not None and generated
         else None,
+        "joules_per_generated_token": round(energy * 3600 / generated, 3)
+        if energy is not None and generated
+        else None,
         "measurement_method": rows[0]["measurement_method"] if rows else None,
         "confidence": rows[0]["confidence"] if rows else None,
     }
@@ -258,19 +264,28 @@ def _current_user() -> str:
 
 
 def _print_report(report: dict) -> None:
-    print("run  prompt_tok  gen_tok  runtime_s  gen_tok/s  est_Wh")
+    print("run  prompt_tok  gen_tok  runtime_s  gen_tok/s  est_Wh  J/tok")
     for row in report["runs"]:
         energy = row["estimated_wh"]
         energy_text = "n/a" if energy is None else f"{energy:.4f}"
+        joules = row.get("joules_per_generated_token")
+        joules_text = "n/a" if joules is None else f"{joules:.2f}"
         rate = row["generation_tokens_per_second"] or 0
         print(
             f"{row['run']:>3}  {row['prompt_tokens']!s:>10}  {row['generated_tokens']!s:>7}  "
-            f"{row['runtime_seconds']:>9.2f}  {rate:>9.2f}  {energy_text:>7}"
+            f"{row['runtime_seconds']:>9.2f}  {rate:>9.2f}  {energy_text:>7}  {joules_text:>6}"
         )
     print()
     print(json.dumps(report["summary"], indent=1))
     if report["runs"]:
         print(f"energy reason: {report['runs'][0]['energy_reason']}")
+    if report["summary"].get("joules_per_generated_token") is not None:
+        print(
+            "\nJ/tok boundary: SoC rails only (CPU, GPU, ANE), idle baseline subtracted, "
+            "whole request divided by generated tokens.\nDRAM, storage, VRM losses, and "
+            "the display are outside the measurement, so J/tok is a lower bound on whole "
+            "machine energy."
+        )
 
 
 async def _calibrate(arguments, settings: Settings) -> int:

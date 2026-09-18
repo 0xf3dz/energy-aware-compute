@@ -39,6 +39,16 @@ JOB_COLUMNS = (
 PENDING_ORDER = "ORDER BY priority DESC, deadline ASC NULLS LAST, created_at ASC, id ASC"
 
 
+def _with_energy_ratio(row: dict[str, Any]) -> dict[str, Any]:
+    """Attach the energy per generated token of the job that produced the row."""
+    metrics = dict(row["metrics"])
+    estimate = EnergyEstimate.model_validate(row["energy_estimate"] or {})
+    metrics["joules_per_generated_token"] = estimate.joules_per_generated_token(
+        metrics.get("generated_tokens")
+    )
+    return metrics
+
+
 class PostgresQueue:
     """Durable queue, provider cache, and dashboard read model."""
 
@@ -148,13 +158,15 @@ class PostgresQueue:
         async with self.pool.connection() as connection, connection.transaction():
             cursor = await connection.execute(
                 "UPDATE jobs SET status = %s, completed_at = CURRENT_TIMESTAMP, "
-                "result = %s, error = %s, actual_estimated_energy_wh = %s "
+                "result = %s, error = %s, actual_estimated_energy_wh = %s, "
+                "energy_estimate = %s "
                 "WHERE id = %s AND status = 'RUNNING' RETURNING id",
                 (
                     status.value,
                     Jsonb(result.model_dump(mode="json")) if result is not None else None,
                     error,
                     estimate.estimated_wh,
+                    Jsonb(estimate.model_dump(mode="json")),
                     job.id,
                 ),
             )
@@ -287,14 +299,17 @@ class PostgresQueue:
         }
 
     async def _inference(self, connection: AsyncConnection) -> dict[str, Any]:
+        # The estimate of the same job supplies the energy per token, so the
+        # ratio always matches the stored measurement.
         cursor = await connection.execute(
-            "SELECT recorded_at, metrics FROM inference_metrics ORDER BY recorded_at DESC, id DESC "
-            "LIMIT 20"
+            "SELECT m.recorded_at, m.metrics, j.energy_estimate "
+            "FROM inference_metrics m LEFT JOIN jobs j ON j.id = m.job_id "
+            "ORDER BY m.recorded_at DESC, m.id DESC LIMIT 20"
         )
-        rows = await cursor.fetchall()
+        rows = [_with_energy_ratio(row) for row in await cursor.fetchall()]
         return {
-            "latest": rows[0]["metrics"] if rows else None,
-            "recent": [row["metrics"] for row in rows],
+            "latest": rows[0] if rows else None,
+            "recent": rows,
         }
 
     async def _jobs(

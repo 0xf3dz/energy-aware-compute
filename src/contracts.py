@@ -55,6 +55,23 @@ class EnergyEstimate(Model):
     samples: list[dict[str, Any]] = Field(default_factory=list)
     reason: str | None = None
 
+    def joules_per_generated_token(self, generated_tokens: int | None) -> float | None:
+        """SoC energy per generated token, in joules.
+
+        The boundary is the measured SoC rails only: CPU, GPU, and ANE. Apple
+        silicon reports no DRAM rail, so DRAM, storage, VRM losses, and the
+        display stay outside the measurement and the value is a lower bound on
+        whole machine energy.
+
+        The estimate is idle subtracted, so the value is marginal energy: the
+        energy that the work added above the calibrated baseline. It covers the
+        whole request, prompt processing included, divided by the generated
+        tokens alone. Compare it only with a value from the same boundary.
+        """
+        if self.estimated_wh is None or not generated_tokens or generated_tokens <= 0:
+            return None
+        return self.estimated_wh * 3600.0 / generated_tokens
+
 
 class ComputeEnergyMonitor(Protocol):
     async def start(self, job_id: str) -> None: ...

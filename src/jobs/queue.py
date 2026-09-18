@@ -191,11 +191,18 @@ def _today(jobs: dict[str, Job], decisions: list[Decision]) -> dict[str, Any]:
 
 
 def _inference(jobs: dict[str, Job]) -> dict[str, Any]:
-    metrics: list[dict[str, Any]] = [
-        item
-        for job in _recent(jobs, limit=20)
-        for item in (job.result or {}).get("inference_metrics", [])
-    ]
+    metrics: list[dict[str, Any]] = []
+    for job in _recent(jobs, limit=20):
+        estimate = EnergyEstimate(estimated_wh=job.actual_estimated_energy_wh)
+        metrics.extend(
+            {
+                **item,
+                "joules_per_generated_token": estimate.joules_per_generated_token(
+                    item.get("generated_tokens")
+                ),
+            }
+            for item in (job.result or {}).get("inference_metrics", [])
+        )
     return {"latest": metrics[0] if metrics else None, "recent": metrics[:20]}
 
 

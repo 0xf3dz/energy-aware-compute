@@ -8,6 +8,7 @@ from contracts import (
     Decision,
     EnergyEstimate,
     EnergyState,
+    InferenceMetrics,
     Job,
     JobResult,
     JobStatus,
@@ -96,7 +97,10 @@ def test_finish_records_outcome_estimate_and_energy_sample() -> None:
         job = await store.enqueue(Job(workload="a"))
         claimed = await store.claim(job.id)
         estimate = EnergyEstimate(estimated_wh=0.5, runtime_seconds=60, average_power_w=30)
-        await store.finish(claimed, JobResult(briefing="text"), estimate)
+        result = JobResult(briefing="text", inference_metrics=[InferenceMetrics(
+            model="qwen", generated_tokens=90, runtime_seconds=60,
+            generation_tokens_per_second=1.5)])
+        await store.finish(claimed, result, estimate)
         await store.record_decision(
             Decision(job_id=job.id, decision="RUN",
                      energy_state=EnergyState(timestamp=NOW, availability=Availability.FRESH),
@@ -113,6 +117,8 @@ def test_finish_records_outcome_estimate_and_energy_sample() -> None:
     assert snapshot["decisions"][0]["decision"] == "RUN"
     assert snapshot["today"]["jobs_completed"] == 1
     assert snapshot["today"]["estimated_inference_wh"] == 0.5
+    # The double must report the same ratio as the durable store: 0.5 Wh / 90.
+    assert snapshot["inference"]["latest"]["joules_per_generated_token"] == 20.0
 
 
 def test_a_repeated_finish_does_not_reopen_a_terminal_job() -> None:
