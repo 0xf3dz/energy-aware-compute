@@ -237,21 +237,24 @@ async def _benchmark(arguments, settings: Settings) -> int:
 
 
 def _summarize(rows: list[dict]) -> dict:
+    # Only measured runs enter the ratio, so the tokens match the energy.
+    measured = [row for row in rows if row["estimated_wh"] is not None]
     generated = sum(row["generated_tokens"] or 0 for row in rows)
     runtime = sum(row["runtime_seconds"] or 0 for row in rows)
-    energies = [row["estimated_wh"] for row in rows if row["estimated_wh"] is not None]
-    energy = sum(energies) if energies else None
+    energy = sum(row["estimated_wh"] for row in measured) if measured else None
+    measured_tokens = sum(row["generated_tokens"] or 0 for row in measured)
     return {
         "requests": len(rows),
+        "measured_requests": len(measured),
         "generated_tokens": generated,
         "runtime_seconds": round(runtime, 3),
         "generation_tokens_per_second": round(generated / runtime, 2) if runtime else None,
         "estimated_wh": round(energy, 6) if energy is not None else None,
-        "estimated_wh_per_million_tokens": round(energy / generated * 1e6, 4)
-        if energy is not None and generated
+        "estimated_wh_per_million_tokens": round(energy / measured_tokens * 1e6, 4)
+        if energy is not None and measured_tokens
         else None,
-        "joules_per_generated_token": round(energy * 3600 / generated, 3)
-        if energy is not None and generated
+        "joules_per_generated_token": round(energy * 3600 / measured_tokens, 3)
+        if energy is not None and measured_tokens
         else None,
         "measurement_method": rows[0]["measurement_method"] if rows else None,
         "confidence": rows[0]["confidence"] if rows else None,
@@ -277,7 +280,10 @@ def _print_report(report: dict) -> None:
         )
     print()
     print(json.dumps(report["summary"], indent=1))
-    if report["runs"]:
+    for row in report["runs"]:
+        if row["estimated_wh"] is None:
+            print(f"run {row['run']} has no energy estimate: {row['energy_reason']}")
+    if report["runs"] and report["runs"][0]["estimated_wh"] is not None:
         print(f"energy reason: {report['runs'][0]['energy_reason']}")
     if report["summary"].get("joules_per_generated_token") is not None:
         print(
