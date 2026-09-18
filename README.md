@@ -1,12 +1,9 @@
 # What is this?
 
-A local compute scheduler for a solar powered sailing vessel. The system runs
-local Qwen inference on a 32GB M2 Max Studio, measures the energy that the inference
-uses, and moves deferrable work into the hours with a solar surplus.
-
-The system schedules compute. It does not replace the Victron VRM dashboard.
-Use VRM for electrical analysis. The dashboard of this project answers one
-question: which compute does the machine run, and why?
+A local compute scheduler for my solar powered sailing vessel. Using a small local inference lab
+on a 32GB M2 Max Studio, 2x 450W solar panels harvesting energy into 48v LiPo batteries, the
+system measures the energy that the inference uses, and moves deferrable work into the hours with a solar surplus 
+based on electrical data from Victron VRM REST API.
 
 # For what purpose?
 
@@ -17,7 +14,7 @@ A boat has a limited energy budget. Navigation equipment and other vessel system
 compute. The scheduler uses battery charge and available solar power to decide whether a task can run or must wait.
 
 The first workload is a daily marine weather briefing. The system downloads a forecast, calculates trends and
-warnings, then asks local Qwen to produce a readable report. Future workloads could include document search,
+warnings, then asks local model(s) to produce a readable report. Future workloads could include document search,
 maintenance-log analysis, and passage preparation.
 
 The prototype will help answer these questions:
@@ -27,11 +24,11 @@ The prototype will help answer these questions:
 - When can surplus solar power support optional compute?
 - Which tasks must wait to protect the battery reserve?
 
-Local inference keeps model execution aboard the boat and avoids dependence on a cloud AI service. Fresh weather
-forecasts and VRM data still need internet access. But these can be downloaded in weekly batches, assuming internet access 
-remains available at least once a week.
+Local inference keeps model execution aboard the boat and avoids being at the mercy of OAI and A\. Fresh weather
+forecasts and VRM data still need internet access. But these can be downloaded in weekly batches, 
+assuming the boat has enough battery SoC to power up the Starlink system and run the download.
 
-The aim is to establish a measured solution for a useful onboard AI system.
+The aim is to establish a measured solution for a useful, onboard AI system.
  
 ## Architecture
 
