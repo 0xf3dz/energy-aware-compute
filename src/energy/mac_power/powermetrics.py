@@ -33,7 +33,11 @@ from energy.mac_power.samples import PowerSample, ProcessSample, parse_power_sam
 logger = logging.getLogger(__name__)
 
 DEFAULT_SAMPLERS = "cpu_power,gpu_power,tasks"
-CAVEAT = "Estimate from sampled SoC power; not metered AC consumption"
+# Apple silicon reports CPU, GPU, and ANE rails. It reports no DRAM rail.
+CAVEAT = (
+    "Estimate from sampled SoC rails (CPU, GPU, ANE); DRAM, storage, VRM losses, "
+    "and the display are excluded; not metered AC consumption"
+)
 
 
 def attribute(

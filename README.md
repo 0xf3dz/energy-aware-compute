@@ -168,6 +168,42 @@ names the missing step.
 A future `SmartPlugProvider` or `VictronMeterProvider` implements the same
 `ComputeEnergyMonitor` interface. The rest of the system does not change.
 
+### Energy per generated token
+
+The estimate gives joules per generated token (J/tok) directly:
+
+```text
+J/tok = estimated_wh * 3600 / generated_tokens
+```
+
+This is the same relation as watts divided by tokens per second. The two forms
+agree because the provider integrates the samples over time, so a changing load
+needs no constant-power assumption.
+
+The boundary of the number is the measured rails. `powermetrics` reports the
+CPU, the GPU, and the ANE. Apple silicon has no DRAM rail, so DRAM, storage,
+VRM losses, and the display stay outside the measurement. J/tok is therefore a
+lower bound on whole machine energy. Compare a J/tok value only with a value
+from the same boundary.
+
+Three more properties of the number:
+
+- The estimate is idle subtracted. J/tok is the marginal energy of the work,
+  not the total draw of the machine.
+- The numerator covers the whole request, prompt processing included. The
+  denominator counts generated tokens only. A long prompt raises J/tok.
+- The provider samples only while the job runs. A manual `powermetrics` window
+  also covers the idle time between requests.
+
+The benchmark prints the ratio per run and for the whole run set:
+
+```bash
+offgrid-inference benchmark --runs 3 --max-tokens 256
+```
+
+The dashboard shows it on the INFERENCE card as "SoC energy per generated
+token". The value is `n/a` together with a reason until a measurement succeeds.
+
 ## VRM energy state
 
 `VRMProvider` reads the diagnostics endpoint of one installation and normalizes
@@ -298,7 +334,7 @@ The dashboard shows four blocks:
 | Block | Content |
 | --- | --- |
 | ENERGY | SOC, solar power, load, surplus, forecast, source status |
-| INFERENCE | model, server status, tok/s, requests, KV usage |
+| INFERENCE | model, server status, tok/s, requests, KV usage, SoC J/tok |
 | SCHEDULER | mode, monitor, thresholds, running and deferred jobs, last reason |
 | TODAY | generated tokens, estimated Wh, jobs completed, jobs deferred |
 
