@@ -42,7 +42,7 @@ def create_app(settings: Settings, runtime: Runtime | None = None) -> FastAPI:
             if runtime is None:
                 await app.state.runtime.close()
 
-    app = FastAPI(title="Energy aware compute", lifespan=lifespan, docs_url="/api/docs")
+    app = FastAPI(title="offgrid-compute", lifespan=lifespan, docs_url="/api/docs")
 
     def authorize(request: Request, token: str | None = Query(default=None)) -> None:
         configured = settings.dashboard_token
