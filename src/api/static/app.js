@@ -24,11 +24,14 @@ function shortTime(value) {
 
 function render(data) {
   const energy = data.energy.latest || {};
-  const surplus =
+  let surplus =
     energy.solar_power_w !== null && energy.solar_power_w !== undefined &&
     energy.ac_load_w !== null && energy.ac_load_w !== undefined
       ? energy.solar_power_w - energy.ac_load_w
       : null;
+  if (surplus !== null && energy.battery_power_w != null) {
+    surplus = Math.min(surplus, energy.battery_power_w);
+  }
   rows("energy", [
     ["State (UTC)", shortTime(energy.timestamp)],
     ["Source status", energy.availability || "UNAVAILABLE",
@@ -66,7 +69,9 @@ function render(data) {
   rows("scheduler", [
     ["Mode", data.runtime.energy_source],
     ["Energy monitor", data.runtime.monitor],
-    ["Poll interval", fmt(data.runtime.poll_seconds, "s", 0)],
+    ["Scheduler interval", fmt(data.runtime.poll_seconds, "s", 0)],
+    ["VRM API interval", fmt(data.runtime.vrm_poll_seconds, "s", 0)],
+    ["Display interval", fmt(REFRESH_MS / 1000, "s", 0)],
     ["Battery floor", fmt(policy.battery_floor, "%", 0)],
     ["High SOC", fmt(policy.high_soc, "%", 0)],
     ["Surplus threshold", fmt(policy.surplus_w, "W", 0)],
