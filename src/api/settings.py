@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     energy_measure_max_seconds: float = Field(default=3600, gt=0)
     vrm_token: SecretStr | None = None
     vrm_installation_id: str | None = None
+    vrm_poll_seconds: float = Field(default=5, ge=5)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
     briefing_hour_utc: int = Field(default=7, ge=0, le=23)
@@ -45,7 +46,7 @@ class Settings(BaseSettings):
     surplus_minimum_watts: float = Field(default=250, ge=0)
     surplus_duration_seconds: float = Field(default=300, ge=0)
     energy_max_age_seconds: float = Field(default=300, gt=0)
-    poll_seconds: float = Field(default=30, gt=0)
+    poll_seconds: float = Field(default=5, gt=0)
     workload_plugins: list[str] = Field(default_factory=list)
 
     @field_validator(*BLANK_AS_NONE, mode="before")

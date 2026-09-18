@@ -65,6 +65,7 @@ class Runtime:
             "energy_source": type(self.energy).__name__,
             "monitor": type(self.monitor).__name__,
             "poll_seconds": self.settings.poll_seconds,
+            "vrm_poll_seconds": self.settings.vrm_poll_seconds,
             "policy": {
                 "battery_floor": self.settings.battery_floor,
                 "high_soc": self.settings.high_soc,
@@ -162,6 +163,8 @@ async def build_runtime(settings: Settings, *, clock: Callable[[], datetime] | N
                 cache,
                 settings.vrm_installation_id,
                 settings.vrm_token.get_secret_value(),
+                poll_interval_seconds=settings.vrm_poll_seconds,
+                freshness_seconds=settings.energy_max_age_seconds,
             )
         else:
             energy = UnavailableEnergyProvider(

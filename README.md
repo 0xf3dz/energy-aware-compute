@@ -179,8 +179,10 @@ battery_soc, solar_power_w, battery_power_w, ac_load_w, solar_forecast_wh
 
 Rules of the adapter:
 
-- Read the `system` service only. Do not add the values of physical batteries
-  or chargers to the aggregate measurements.
+- Read power and battery measurements from the `system` service only.
+  If its phase count is absent, use configuration from one unambiguous VE.Bus system.
+  Require a power measurement for every configured phase.
+  Do not use the age of unchanged phase configuration as the age of measured power.
 - Mark a measurement `STALE` when it is older than the freshness limit, and
   `UNAVAILABLE` when no value exists.
 - Keep the last good response in the cache, so an internet outage does not stop
@@ -191,6 +193,17 @@ Rules of the adapter:
 VRM supplies no solar forecast on the diagnostics endpoint, so
 `solar_forecast_wh` stays null. The scheduler uses a forecast budget only when
 a provider supplies the value.
+
+The default scheduler interval (`POLL_SECONDS`) and VRM API interval
+(`VRM_POLL_SECONDS`, minimum 5) are 5 seconds. The browser also refreshes every
+5 seconds. A longer scheduler interval limits the API request frequency.
+The ENERGY timestamp shows the measurement time, not the last browser refresh.
+
+REST diagnostics can return unchanged measurements between GX uploads.
+Faster requests cannot make those measurements newer.
+[VRM real-time mode](https://www.victronenergy.com/media/pg/VRM_Portal_manual/en/real-time-data.html)
+uses a separate connection with updates every two seconds.
+This application does not implement that connection.
 
 ## Weather and the daily briefing
 
