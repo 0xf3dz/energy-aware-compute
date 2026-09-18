@@ -210,3 +210,22 @@ def test_mock_monitor_reports_simulated_method() -> None:
     assert estimate.measurement_method == "mock"
     assert estimate.confidence == "simulated"
     assert monitor.stops == 1
+
+
+def test_estimate_is_null_when_the_sampled_power_does_not_exceed_the_baseline() -> None:
+    """A job inside the idle baseline has no measurable marginal energy."""
+    counter = {"t": 0.0}
+
+    def clock() -> float:
+        counter["t"] += 1.4
+        return counter["t"]
+
+    provider = _provider(
+        plist_stream([power_document(4000, 6000, pid=LLAMA_PID) for _ in range(3)]),
+        idle_baseline_w=10.0,
+        clock=clock,
+    )
+    estimate = _run(provider)
+    assert estimate.average_power_w == pytest.approx(10.0)
+    assert estimate.estimated_wh is None
+    assert "idle baseline" in (estimate.reason or "")

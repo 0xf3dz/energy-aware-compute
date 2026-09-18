@@ -319,7 +319,18 @@ class PowermetricsProvider(ComputeEnergyMonitor):
             )
         if record.get("reason"):
             notes.append(record["reason"])
-        base.estimated_wh = round(energy_wh, 6) if covered > 0 else None
+        if covered <= 0:
+            notes.append("No sample interval was covered, so no energy is attributed to this job")
+            base.estimated_wh = None
+        elif average_w is not None and average_w <= self.idle_baseline_w:
+            notes.append(
+                f"Sampled average power {average_w:.1f} W did not exceed the "
+                f"{self.idle_baseline_w:.1f} W idle baseline, so the marginal energy of this "
+                "job is below the resolution of the measurement"
+            )
+            base.estimated_wh = None
+        else:
+            base.estimated_wh = round(energy_wh, 6)
         base.runtime_seconds = covered
         base.average_power_w = average_w
         base.reason = "; ".join(notes)
