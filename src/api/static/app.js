@@ -63,7 +63,13 @@ function render(data) {
     ["Last request generated tokens", latest.generated_tokens ?? "n/a"],
     ["Last request tok/s", fmt(latest.generation_tokens_per_second, "", 1)],
     ["Last request runtime", fmt(latest.runtime_seconds, "s", 2)],
+    ["SoC energy per generated token", fmt(latest.joules_per_generated_token, "J/tok", 2)],
   ]);
+  document.querySelector("#inference-reason").textContent =
+    latest.joules_per_generated_token == null
+      ? "No SoC energy measurement. J/tok needs a successful powermetrics sample and a token count."
+      : "J/tok: measured SoC rails only (CPU, GPU, ANE), idle baseline subtracted, " +
+        "whole request divided by generated tokens. DRAM and storage are outside the measurement.";
 
   const policy = data.runtime.policy || {};
   rows("scheduler", [
